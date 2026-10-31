@@ -115,27 +115,90 @@ enum PaperlessDocumentSearch {
   /// How many of the top hits get their full text fetched for Siri.
   static let fullTextHits = 3
 
-  /// Full-text search (title + content), newest first. The top hits carry
-  /// their full OCR text; the rest carry the server's truncated snippet.
+  /// Words in a correspondent's name too generic to identify it.
+  private static let genericNameWords: Set<String> = [
+    "bank", "the", "malaysia", "berhad", "bhd", "sdn", "ltd", "limited", "inc",
+    "insurance", "company", "co", "group", "my", "of", "and",
+  ]
+
+  /// Words dropped from a spoken query before it is sent to the server.
+  private static let stopWords: Set<String> = [
+    "a", "an", "the", "my", "me", "i", "of", "on", "in", "for", "from", "to", "and",
+    "what", "which", "when", "where", "who", "how", "was", "is", "are", "were", "did",
+    "do", "does", "find", "show", "search", "get", "last", "latest", "recent",
+    "most", "newest", "please", "document", "documents", "file", "files", "paperless",
+  ]
+
+  private static func words(_ text: String) -> [String] {
+    text.lowercased()
+      .components(separatedBy: CharacterSet.alphanumerics.inverted)
+      .filter { !$0.isEmpty }
+  }
+
+  /// Correspondents named in the query, and the query words that named them.
+  private static func matchCorrespondents(
+    in queryWords: [String], names: [UInt: String]
+  ) -> (ids: [UInt], used: Set<String>) {
+    var ids: [UInt] = []
+    var used: Set<String> = []
+    let querySet = Set(queryWords)
+    for (id, name) in names {
+      let key = words(name).filter { $0.count >= 3 && !genericNameWords.contains($0) }
+      guard let first = key.first, querySet.contains(first) else { continue }
+      ids.append(id)
+      used.insert(first)
+    }
+    return (ids, used)
+  }
+
+  /// Searches the archive for `text`.
+  ///
+  /// A correspondent named in the query ("HSBC") becomes a correspondent
+  /// filter, so documents that merely mention it are left out. The remaining
+  /// words go to the full-text index. Results are newest first when a
+  /// correspondent matched (statements, bills), otherwise by relevance. The top
+  /// hits carry their full OCR text.
   static func search(
     _ text: String, limit: UInt, server: PaperlessServerEntity? = nil
   ) async throws -> [PaperlessDocumentEntity] {
     let query = text.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !query.isEmpty else { return [] }
 
-    let filter = FilterState.empty.with {
-      $0.searchText = query
-      $0.searchMode = .titleContent
-      $0.sorting = FilterState.Sorting(field: .created, order: .descending)
-    }
-
     return try await PaperlessIntentStore.run { context in
       let store = try await context.store(server: server)
-      // Names for correspondents/types/tags come from the local cache.
       await store.sync(timeout: .seconds(3))
+      let names = await PaperlessDocumentEntity.Names(store)
       let repository = await store.repository
-      let source = try await repository.documents(filter: filter)
-      var documents = try await source.fetch(limit: limit)
+
+      let queryWords = words(query)
+      let matched = matchCorrespondents(in: queryWords, names: names.correspondents)
+      let remaining = queryWords.filter {
+        !matched.used.contains($0) && !stopWords.contains($0)
+      }
+
+      func run(_ terms: [String]) async throws -> [Document] {
+        let filter = FilterState.empty.with {
+          if !matched.ids.isEmpty {
+            $0.correspondent = .anyOf(ids: matched.ids)
+          }
+          if !terms.isEmpty {
+            $0.searchText = terms.joined(separator: " ")
+            $0.searchMode = .advanced
+          }
+          let byDate = !matched.ids.isEmpty || terms.isEmpty
+          $0.sorting = FilterState.Sorting(
+            field: byDate ? .created : .score, order: .descending)
+        }
+        let source = try await repository.documents(filter: filter)
+        return try await source.fetch(limit: limit)
+      }
+
+      var documents = try await run(remaining)
+      // Too narrow: fall back to everything from the correspondent.
+      if documents.isEmpty, !matched.ids.isEmpty, !remaining.isEmpty {
+        documents = try await run([])
+      }
+
       for index in documents.indices.prefix(fullTextHits) {
         if let full = try? await repository.document(id: documents[index].id),
           let content = full.content
@@ -143,7 +206,6 @@ enum PaperlessDocumentSearch {
           documents[index].content = content
         }
       }
-      let names = await PaperlessDocumentEntity.Names(store)
       return documents.map { PaperlessDocumentEntity($0, names: names) }
     }
   }

@@ -106,6 +106,15 @@ struct PaperlessShortcutsProvider: AppShortcutsProvider {
       shortTitle: "Upload Document",
       systemImageName: "doc.badge.arrow.up")
     AppShortcut(
+      intent: AskPaperlessIntent(),
+      phrases: [
+        "Ask \(.applicationName)",
+        "Ask \(.applicationName) a question",
+        "Check \(.applicationName)",
+      ],
+      shortTitle: "Ask Paperless",
+      systemImageName: "text.bubble")
+    AppShortcut(
       intent: SearchDocumentsIntent(),
       phrases: [
         "Search \(.applicationName)",
