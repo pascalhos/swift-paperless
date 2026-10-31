@@ -219,7 +219,7 @@ private func previewSQLiteError(
 
 #Preview("App group unavailable") {
   DatabaseFailureView(
-    error: DatabaseError.appGroupUnavailable(identifier: "group.com.paulgessinger.swift-paperless")
+    error: DatabaseError.appGroupUnavailable(identifier: "group.com.pascalhos.swift-paperless")
   ) {}
 }
 

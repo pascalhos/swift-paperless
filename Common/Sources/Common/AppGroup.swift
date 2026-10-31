@@ -16,7 +16,7 @@ import Foundation
 /// any Swift runs — but every Swift call site should reference this constant
 /// rather than hard-coding the string.
 public enum AppGroup {
-  public static let identifier = "group.com.paulgessinger.swift-paperless"
+  public static let identifier = "group.com.pascalhos.swift-paperless"
 
   /// The shared container; `nil` when the process has no entitlement for it.
   public static func container(identifier: String = identifier) -> URL? {

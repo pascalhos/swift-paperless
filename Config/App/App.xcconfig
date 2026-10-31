@@ -3,7 +3,7 @@
 #include "../Shared/Version.xcconfig"
 
 PRODUCT_NAME = Paperless
-PRODUCT_BUNDLE_IDENTIFIER = com.paulgessinger.swift-paperless
+PRODUCT_BUNDLE_IDENTIFIER = com.pascalhos.swift-paperless
 
 IPHONEOS_DEPLOYMENT_TARGET = 17.0
 MACOSX_DEPLOYMENT_TARGET = 14.0

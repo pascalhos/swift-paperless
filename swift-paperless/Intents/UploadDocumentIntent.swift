@@ -105,5 +105,21 @@ struct PaperlessShortcutsProvider: AppShortcutsProvider {
       ],
       shortTitle: "Upload Document",
       systemImageName: "doc.badge.arrow.up")
+    AppShortcut(
+      intent: SearchDocumentsIntent(),
+      phrases: [
+        "Search \(.applicationName)",
+        "Search documents in \(.applicationName)",
+        "Find a document in \(.applicationName)",
+      ],
+      shortTitle: "Search Documents",
+      systemImageName: "doc.text.magnifyingglass")
+    AppShortcut(
+      intent: OpenDocumentIntent(),
+      phrases: [
+        "Open a document in \(.applicationName)",
+      ],
+      shortTitle: "Open Document",
+      systemImageName: "doc.text")
   }
 }

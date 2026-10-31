@@ -3,7 +3,7 @@
 #include "../Shared/Version.xcconfig"
 
 PRODUCT_NAME = $(TARGET_NAME)
-PRODUCT_BUNDLE_IDENTIFIER = com.paulgessinger.swift-paperless.ShareExtension
+PRODUCT_BUNDLE_IDENTIFIER = com.pascalhos.swift-paperless.ShareExtension
 
 IPHONEOS_DEPLOYMENT_TARGET = 17.0
 TARGETED_DEVICE_FAMILY = 1,2
