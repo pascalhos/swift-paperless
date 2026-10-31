@@ -359,6 +359,9 @@ struct MainView: View {
 
     .task {
       biometricLockManager.lockIfEnabled()
+      // Lets Siri phrases that name a server ("Ask Paperless Work") know the
+      // current server names.
+      PaperlessShortcutsProvider.updateAppShortcutParameters()
 
       guard initialDisplay else {
         return

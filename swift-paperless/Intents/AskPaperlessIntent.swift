@@ -22,13 +22,17 @@ struct AskPaperlessIntent: AppIntent {
   static let openAppWhenRun = false
 
   static var parameterSummary: some ParameterSummary {
-    Summary("Ask Paperless \(\.$question)")
+    Summary("Ask \(\.$server) \(\.$question)")
   }
 
   @Parameter(
     title: "Question",
     requestValueDialog: IntentDialog("What would you like to know from your documents?"))
   var question: String
+
+  /// Which Paperless instance to search. Defaults to the one active in the app.
+  @Parameter(title: "Server")
+  var server: PaperlessServerEntity?
 
   init() {}
 
@@ -40,7 +44,7 @@ struct AskPaperlessIntent: AppIntent {
   func perform() async throws
     -> some IntentResult & ReturnsValue<[PaperlessDocumentEntity]> & ProvidesDialog
   {
-    let documents = try await PaperlessDocumentSearch.search(question, limit: 5)
+    let documents = try await PaperlessDocumentSearch.search(question, limit: 5, server: server)
 
     guard !documents.isEmpty else {
       return .result(

@@ -111,6 +111,9 @@ struct PaperlessShortcutsProvider: AppShortcutsProvider {
         "Ask \(.applicationName)",
         "Ask \(.applicationName) a question",
         "Check \(.applicationName)",
+        "Ask \(.applicationName) \(\.$server)",
+        "Ask \(\.$server) in \(.applicationName)",
+        "Check \(\.$server) in \(.applicationName)",
       ],
       shortTitle: "Ask Paperless",
       systemImageName: "text.bubble")
@@ -119,6 +122,7 @@ struct PaperlessShortcutsProvider: AppShortcutsProvider {
       phrases: [
         "Search \(.applicationName)",
         "Search documents in \(.applicationName)",
+        "Search \(\.$server) in \(.applicationName)",
         "Find a document in \(.applicationName)",
       ],
       shortTitle: "Search Documents",
