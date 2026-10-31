@@ -48,18 +48,31 @@ struct PaperlessDocumentEntity: AppEntity {
     return DisplayRepresentation(
       title: "\(title)",
       subtitle: "\(parts.joined(separator: " · "))",
-      image: .init(systemName: "doc.text"))
+      image: DisplayRepresentation.Image(systemName: "doc.text"))
   }
 
-  @MainActor
-  init(_ document: Document, store: DocumentStore) {
+  /// Element names, read once from the store's cache on the main actor.
+  struct Names: Sendable {
+    var correspondents: [UInt: String] = [:]
+    var documentTypes: [UInt: String] = [:]
+    var tags: [UInt: String] = [:]
+
+    @MainActor
+    init(_ store: DocumentStore) {
+      correspondents = store.correspondents.mapValues { $0.name }
+      documentTypes = store.documentTypes.mapValues { $0.name }
+      tags = store.tags.mapValues { $0.name }
+    }
+  }
+
+  init(_ document: Document, names: Names) {
     id = Int(document.id)
     title = document.title
-    correspondent = document.correspondent.flatMap { store.correspondents[$0]?.name }
-    documentType = document.documentType.flatMap { store.documentTypes[$0]?.name }
-    tags = document.tags.compactMap { store.tags[$0]?.name }
+    correspondent = document.correspondent.flatMap { names.correspondents[$0] }
+    documentType = document.documentType.flatMap { names.documentTypes[$0] }
+    tags = document.tags.compactMap { names.tags[$0] }
     created = document.created
-    asn = document.asn.map(Int.init)
+    asn = document.asn.map { Int($0) }
     content = document.content.map { Self.trim($0) }
   }
 
@@ -83,8 +96,11 @@ struct PaperlessDocumentQuery: EntityStringQuery {
     return try await PaperlessIntentStore.run { context in
       let store = try await context.store()
       await store.sync(timeout: .seconds(3))
-      let docs = try await store.repository.documents(ids: identifiers.map(UInt.init))
-      return docs.map { PaperlessDocumentEntity($0, store: store) }
+      let ids: [UInt] = identifiers.map { UInt($0) }
+      let repository = await store.repository
+      let docs = try await repository.documents(ids: ids)
+      let names = await PaperlessDocumentEntity.Names(store)
+      return docs.map { PaperlessDocumentEntity($0, names: names) }
     }
   }
 
@@ -117,16 +133,18 @@ enum PaperlessDocumentSearch {
       let store = try await context.store(server: server)
       // Names for correspondents/types/tags come from the local cache.
       await store.sync(timeout: .seconds(3))
-      let source = try store.repository.documents(filter: filter)
+      let repository = await store.repository
+      let source = try await repository.documents(filter: filter)
       var documents = try await source.fetch(limit: limit)
       for index in documents.indices.prefix(fullTextHits) {
-        if let full = try? await store.repository.document(id: documents[index].id),
+        if let full = try? await repository.document(id: documents[index].id),
           let content = full.content
         {
           documents[index].content = content
         }
       }
-      return documents.map { PaperlessDocumentEntity($0, store: store) }
+      let names = await PaperlessDocumentEntity.Names(store)
+      return documents.map { PaperlessDocumentEntity($0, names: names) }
     }
   }
 }
