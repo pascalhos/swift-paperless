@@ -125,6 +125,10 @@ public struct Document: Identifiable, Equatable, Hashable, Sendable {
   // The API wants this extra key for writing perms
   public var setPermissions: Permissions?
 
+  /// OCR text. Only set when the server sent it (the list endpoint truncates
+  /// it); never persisted to the local cache.
+  public var content: String? = nil
+
   public init(
     id: UInt,
     title: String,

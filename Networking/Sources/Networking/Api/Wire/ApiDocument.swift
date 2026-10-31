@@ -40,6 +40,7 @@ public struct ApiDocument: Codable, Sendable {
   // Read-only on the wire; absent on backends predating multi-version support.
   var versions: [ApiDocumentVersion]?
   var permissions: Permissions?
+  var content: String?
 }
 
 extension ApiDocument {
@@ -64,6 +65,7 @@ extension ApiDocument {
       versions: versions?.map(\.domain) ?? []
     )
     doc.permissions = permissions
+    doc.content = content
     return doc
   }
 }
